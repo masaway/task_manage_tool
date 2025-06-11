@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, Typography, IconButton, Box } from '@mui/material';
 import { DragHandle as DragHandleIcon, Check as CheckIcon } from '@mui/icons-material';
 import { Task } from '../types/task';
@@ -11,6 +11,9 @@ interface TaskCardProps {
 }
 
 export const TaskCard: React.FC<TaskCardProps> = ({ task, onComplete }) => {
+  const [elapsedTime, setElapsedTime] = useState<number>(0);
+  const [timerStartTime, setTimerStartTime] = useState<Date | null>(null);
+
   const {
     attributes,
     listeners,
@@ -25,6 +28,38 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onComplete }) => {
       task,
     },
   });
+
+  // タイマーの更新処理
+  useEffect(() => {
+    if (task.status === 'now') {
+      if (!timerStartTime) {
+        setTimerStartTime(new Date());
+      }
+    } else {
+      setTimerStartTime(null);
+      setElapsedTime(0);
+    }
+  }, [task.status]);
+
+  // 1秒ごとに経過時間を更新
+  useEffect(() => {
+    if (!timerStartTime) return;
+
+    const interval = setInterval(() => {
+      const now = new Date();
+      const elapsed = (now.getTime() - timerStartTime.getTime()) / 1000;
+      setElapsedTime(elapsed);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [timerStartTime]);
+
+  const formatTime = (seconds: number): string => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const remainingSeconds = Math.floor(seconds % 60);
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+  };
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -84,8 +119,13 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onComplete }) => {
             予定時間: {task.estimatedHours}時間
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            作業時間: {task.actualHours}時間
+            累計作業時間: {task.actualHours}
           </Typography>
+          {task.status === 'now' && (
+            <Typography variant="body2" color="primary" sx={{ mt: 1, fontWeight: 'bold' }}>
+              現在の作業時間: {formatTime(elapsedTime)}
+            </Typography>
+          )}
         </Box>
       </CardContent>
     </Card>

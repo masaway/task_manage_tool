@@ -2,6 +2,21 @@ import { useState, useEffect } from 'react';
 import { Task, TaskFormData } from '../types/task';
 import { supabase } from '../services/supabase';
 
+// 時間をHH:MM:SS形式に変換する関数
+const formatTimeToHHMMSS = (hours: number): string => {
+  const totalSeconds = Math.floor(hours * 3600);
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
+  const s = totalSeconds % 60;
+  return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+};
+
+// HH:MM:SS形式の文字列を時間に変換する関数
+const parseHHMMSSToHours = (timeStr: string): number => {
+  const [hours, minutes, seconds] = timeStr.split(':').map(Number);
+  return hours + minutes / 60 + seconds / 3600;
+};
+
 // スネークケースからキャメルケースへの変換関数
 const convertToCamelCase = (data: any): Task => {
   return {
@@ -22,10 +37,54 @@ export const useTasks = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [timerStartTime, setTimerStartTime] = useState<Date | null>(null);
 
   useEffect(() => {
     fetchTasks();
   }, []);
+
+  // タイマーの更新処理
+  useEffect(() => {
+    const nowTask = tasks.find(task => task.status === 'now');
+    if (nowTask && !timerStartTime) {
+      setTimerStartTime(new Date());
+    } else if (!nowTask && timerStartTime) {
+      setTimerStartTime(null);
+    }
+  }, [tasks]);
+
+  // 1分ごとに作業時間を更新
+  useEffect(() => {
+    if (!timerStartTime) return;
+
+    const interval = setInterval(async () => {
+      const nowTask = tasks.find(task => task.status === 'now');
+      if (!nowTask) return;
+
+      const elapsedHours = (new Date().getTime() - timerStartTime.getTime()) / (1000 * 60 * 60);
+      const currentHours = parseHHMMSSToHours(nowTask.actualHours);
+      const newActualHours = currentHours + elapsedHours;
+      const formattedTime = formatTimeToHHMMSS(newActualHours);
+
+      try {
+        const { error: updateError } = await supabase
+          .from('tasks')
+          .update({ actual_hours: formattedTime })
+          .eq('id', nowTask.id);
+
+        if (updateError) throw updateError;
+
+        setTasks(tasks.map(task =>
+          task.id === nowTask.id ? { ...task, actualHours: formattedTime } : task
+        ));
+        setTimerStartTime(new Date());
+      } catch (err) {
+        console.error('作業時間の更新に失敗:', err);
+      }
+    }, 60000); // 1分ごとに更新
+
+    return () => clearInterval(interval);
+  }, [timerStartTime, tasks]);
 
   const fetchTasks = async () => {
     try {
@@ -73,16 +132,42 @@ export const useTasks = () => {
 
   const updateTaskStatus = async (taskId: string, newStatus: Task['status']) => {
     try {
-      const { error: updateError } = await supabase
-        .from('tasks')
-        .update({ status: newStatus })
-        .eq('id', taskId);
+      const task = tasks.find(t => t.id === taskId);
+      if (!task) return;
 
-      if (updateError) throw updateError;
+      // ステータスがnowから変更される場合、作業時間を更新
+      if (task.status === 'now' && newStatus !== 'now' && timerStartTime) {
+        const elapsedHours = (new Date().getTime() - timerStartTime.getTime()) / (1000 * 60 * 60);
+        const currentHours = parseHHMMSSToHours(task.actualHours);
+        const newActualHours = currentHours + elapsedHours;
+        const formattedTime = formatTimeToHHMMSS(newActualHours);
 
-      setTasks(tasks.map(task => 
-        task.id === taskId ? { ...task, status: newStatus } : task
-      ));
+        const { error: updateError } = await supabase
+          .from('tasks')
+          .update({ 
+            status: newStatus,
+            actual_hours: formattedTime
+          })
+          .eq('id', taskId);
+
+        if (updateError) throw updateError;
+
+        setTasks(tasks.map(t => 
+          t.id === taskId ? { ...t, status: newStatus, actualHours: formattedTime } : t
+        ));
+        setTimerStartTime(null);
+      } else {
+        const { error: updateError } = await supabase
+          .from('tasks')
+          .update({ status: newStatus })
+          .eq('id', taskId);
+
+        if (updateError) throw updateError;
+
+        setTasks(tasks.map(t => 
+          t.id === taskId ? { ...t, status: newStatus } : t
+        ));
+      }
     } catch (err) {
       console.error('タスクの更新に失敗:', err);
       setError(err instanceof Error ? err.message : 'タスクの更新に失敗しました');

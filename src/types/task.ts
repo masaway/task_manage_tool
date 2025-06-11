@@ -5,7 +5,7 @@ export interface Task {
   title: string;
   status: TaskStatus;
   estimatedHours: number;
-  actualHours: number;
+  actualHours: string; // HH:MM:SS形式の文字列
   createdAt: Date;
   dueDate?: Date;
   isCompleted: boolean;
