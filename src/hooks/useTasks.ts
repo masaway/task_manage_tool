@@ -12,7 +12,8 @@ const formatTimeToHHMMSS = (hours: number): string => {
 };
 
 // HH:MM:SS形式の文字列を時間に変換する関数
-const parseHHMMSSToHours = (timeStr: string): number => {
+const parseHHMMSSToHours = (timeStr: string | undefined): number => {
+  if (!timeStr) return 0;
   const [hours, minutes, seconds] = timeStr.split(':').map(Number);
   return hours + minutes / 60 + seconds / 3600;
 };
@@ -24,12 +25,13 @@ const convertToCamelCase = (data: any): Task => {
     title: data.title,
     status: data.status,
     estimatedHours: data.estimated_hours,
-    actualHours: data.actual_hours,
+    actualHours: data.actual_hours || '00:00:00',
     createdAt: new Date(data.created_at),
     dueDate: data.due_date ? new Date(data.due_date) : undefined,
     isCompleted: data.is_completed,
     startedAt: data.started_at ? new Date(data.started_at) : undefined,
     completedAt: data.completed_at ? new Date(data.completed_at) : undefined,
+    timerStartedAt: data.timer_started_at ? new Date(data.timer_started_at) : undefined,
   };
 };
 
@@ -46,9 +48,26 @@ export const useTasks = () => {
   // タイマーの更新処理
   useEffect(() => {
     const nowTask = tasks.find(task => task.status === 'now');
-    if (nowTask && !timerStartTime) {
-      setTimerStartTime(new Date());
-    } else if (!nowTask && timerStartTime) {
+    if (nowTask) {
+      if (!timerStartTime) {
+        // タイマー開始時間が保存されている場合はそれを使用
+        if (nowTask.timerStartedAt) {
+          setTimerStartTime(new Date(nowTask.timerStartedAt));
+        } else {
+          // 新しくタイマーを開始
+          const startTime = new Date();
+          setTimerStartTime(startTime);
+          // データベースに開始時間を保存
+          supabase
+            .from('tasks')
+            .update({ timer_started_at: startTime.toISOString() })
+            .eq('id', nowTask.id)
+            .then(({ error }) => {
+              if (error) console.error('タイマー開始時間の保存に失敗:', error);
+            });
+        }
+      }
+    } else {
       setTimerStartTime(null);
     }
   }, [tasks]);
@@ -116,6 +135,7 @@ export const useTasks = () => {
             estimated_hours: taskData.estimatedHours,
             due_date: taskData.dueDate,
             is_completed: false,
+            actual_hours: '00:00:00'
           },
         ])
         .select();
@@ -136,24 +156,33 @@ export const useTasks = () => {
       if (!task) return;
 
       // ステータスがnowから変更される場合、作業時間を更新
-      if (task.status === 'now' && newStatus !== 'now' && timerStartTime) {
-        const elapsedHours = (new Date().getTime() - timerStartTime.getTime()) / (1000 * 60 * 60);
+      if (task.status === 'now' && newStatus !== 'now') {
+        const elapsedHours = timerStartTime ? 
+          (new Date().getTime() - timerStartTime.getTime()) / (1000 * 60 * 60) : 0;
         const currentHours = parseHHMMSSToHours(task.actualHours);
         const newActualHours = currentHours + elapsedHours;
         const formattedTime = formatTimeToHHMMSS(newActualHours);
+
+        console.log('Updating task time:', {
+          taskId,
+          currentTime: task.actualHours,
+          elapsedHours,
+          newTime: formattedTime
+        });
 
         const { error: updateError } = await supabase
           .from('tasks')
           .update({ 
             status: newStatus,
-            actual_hours: formattedTime
+            actual_hours: formattedTime,
+            timer_started_at: null // タイマー開始時間をクリア
           })
           .eq('id', taskId);
 
         if (updateError) throw updateError;
 
         setTasks(tasks.map(t => 
-          t.id === taskId ? { ...t, status: newStatus, actualHours: formattedTime } : t
+          t.id === taskId ? { ...t, status: newStatus, actualHours: formattedTime, timerStartedAt: undefined } : t
         ));
         setTimerStartTime(null);
       } else {
@@ -177,27 +206,81 @@ export const useTasks = () => {
 
   const updateMultipleTaskStatuses = async (updates: { taskId: string; newStatus: Task['status'] }[]) => {
     try {
+      // 時間更新が必要なタスクを特定
+      const timeUpdates = updates.map(({ taskId, newStatus }) => {
+        const task = tasks.find(t => t.id === taskId);
+        if (!task) return { taskId, newStatus };
+        
+        if (task.status === 'now' && newStatus !== 'now') {
+          const elapsedHours = timerStartTime ? 
+            (new Date().getTime() - timerStartTime.getTime()) / (1000 * 60 * 60) : 0;
+          const currentHours = parseHHMMSSToHours(task.actualHours || '00:00:00');
+          const newActualHours = currentHours + elapsedHours;
+          const formattedTime = formatTimeToHHMMSS(newActualHours);
+
+          console.log('Updating multiple task times:', {
+            taskId,
+            currentTime: task.actualHours || '00:00:00',
+            elapsedHours,
+            newTime: formattedTime
+          });
+
+          return {
+            taskId,
+            newStatus,
+            actualHours: formattedTime
+          } as const;
+        }
+        return { taskId, newStatus } as const;
+      });
+
       // データベースの更新
-      const updatePromises = updates.map(({ taskId, newStatus }) =>
-        supabase
-          .from('tasks')
-          .update({ status: newStatus })
-          .eq('id', taskId)
-      );
+      const updatePromises = timeUpdates.map(update => {
+        if ('actualHours' in update) {
+          return supabase
+            .from('tasks')
+            .update({ 
+              status: update.newStatus,
+              actual_hours: update.actualHours
+            })
+            .eq('id', update.taskId);
+        } else {
+          return supabase
+            .from('tasks')
+            .update({ status: update.newStatus })
+            .eq('id', update.taskId);
+        }
+      });
 
       await Promise.all(updatePromises);
 
       // ローカルの状態更新
       setTasks(currentTasks => {
         const taskMap = new Map(currentTasks.map(task => [task.id, task]));
-        updates.forEach(({ taskId, newStatus }) => {
-          const task = taskMap.get(taskId);
+        timeUpdates.forEach(update => {
+          const task = taskMap.get(update.taskId);
           if (task) {
-            taskMap.set(taskId, { ...task, status: newStatus });
+            if ('actualHours' in update) {
+              taskMap.set(update.taskId, { 
+                ...task, 
+                status: update.newStatus,
+                actualHours: update.actualHours
+              });
+            } else {
+              taskMap.set(update.taskId, { 
+                ...task, 
+                status: update.newStatus 
+              });
+            }
           }
         });
         return Array.from(taskMap.values());
       });
+
+      // タイマーをリセット
+      if (timeUpdates.some(update => 'actualHours' in update)) {
+        setTimerStartTime(null);
+      }
     } catch (err) {
       console.error('タスクの一括更新に失敗:', err);
       setError(err instanceof Error ? err.message : 'タスクの一括更新に失敗しました');

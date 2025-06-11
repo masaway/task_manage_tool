@@ -5,12 +5,13 @@ export interface Task {
   title: string;
   status: TaskStatus;
   estimatedHours: number;
-  actualHours: string; // HH:MM:SS形式の文字列
+  actualHours?: string; // HH:MM:SS形式の文字列（オプショナル）
   createdAt: Date;
   dueDate?: Date;
   isCompleted: boolean;
   startedAt?: Date;
   completedAt?: Date;
+  timerStartedAt?: Date; // タイマー開始時間
 }
 
 export interface TaskFormData {
