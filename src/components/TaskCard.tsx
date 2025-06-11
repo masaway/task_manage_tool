@@ -69,19 +69,24 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onComplete }) => {
         <Typography variant="h6" component="div" sx={{ mt: 1 }}>
           {task.title}
         </Typography>
-        <Typography variant="body2" color="text.secondary">
-          予定時間: {task.estimatedHours}時間
-        </Typography>
-        {task.actualHours > 0 && (
+        <Box sx={{ mt: 1 }}>
+          {task.startedAt && (
+            <Typography variant="body2" color="text.secondary">
+              作業開始日: {new Date(task.startedAt).toLocaleDateString()}
+            </Typography>
+          )}
+          {task.dueDate && (
+            <Typography variant="body2" color="text.secondary">
+              期限日時: {new Date(task.dueDate).toLocaleDateString()}
+            </Typography>
+          )}
           <Typography variant="body2" color="text.secondary">
-            実績時間: {task.actualHours}時間
+            予定時間: {task.estimatedHours}時間
           </Typography>
-        )}
-        {task.dueDate && (
           <Typography variant="body2" color="text.secondary">
-            期限: {new Date(task.dueDate).toLocaleDateString()}
+            作業時間: {task.actualHours}時間
           </Typography>
-        )}
+        </Box>
       </CardContent>
     </Card>
   );

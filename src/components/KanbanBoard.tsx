@@ -68,7 +68,7 @@ const DroppableColumn: React.FC<DroppableColumnProps> = ({ status, children }) =
 };
 
 export const KanbanBoard: React.FC = () => {
-  const { tasks, loading, error, createTask, updateTaskStatus, completeTask } = useTasks();
+  const { tasks, loading, error, createTask, updateTaskStatus, updateMultipleTaskStatuses, completeTask } = useTasks();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
 
@@ -113,6 +113,18 @@ export const KanbanBoard: React.FC = () => {
       : null;
 
     if (activeTask && targetStatus && activeTask.status !== targetStatus) {
+      if (targetStatus === 'now') {
+        const existingNowTask = tasks.find(task => task.status === 'now');
+        if (existingNowTask) {
+          console.log('Moving existing now task to todo and new task to now');
+          updateMultipleTaskStatuses([
+            { taskId: existingNowTask.id, newStatus: 'todo' },
+            { taskId: activeTask.id, newStatus: 'now' }
+          ]);
+          return;
+        }
+      }
+
       console.log('Updating task status:', {
         taskId: activeTask.id,
         currentStatus: activeTask.status,
