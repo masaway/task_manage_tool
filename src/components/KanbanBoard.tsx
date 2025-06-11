@@ -32,12 +32,12 @@ import { useNavigate } from 'react-router-dom';
 
 const COLUMN_TITLES: Record<TaskStatus, string> = {
   backlog: 'Backlog',
-  todo: 'Todo',
+  in_progress: 'In Progress',
   now: 'Now',
   done: 'Done',
 };
 
-const STATUS_COLUMNS: TaskStatus[] = ['backlog', 'todo', 'now', 'done'];
+const STATUS_COLUMNS: TaskStatus[] = ['backlog', 'in_progress', 'now', 'done'];
 
 interface DroppableColumnProps {
   status: TaskStatus;
@@ -118,9 +118,9 @@ export const KanbanBoard: React.FC = () => {
       if (targetStatus === 'now') {
         const existingNowTask = tasks.find(task => task.status === 'now');
         if (existingNowTask) {
-          console.log('Moving existing now task to todo and new task to now');
+          console.log('Moving existing now task to in_progress and new task to now');
           updateMultipleTaskStatuses([
-            { taskId: existingNowTask.id, newStatus: 'todo' },
+            { taskId: existingNowTask.id, newStatus: 'in_progress' },
             { taskId: activeTask.id, newStatus: 'now' }
           ]);
           return;

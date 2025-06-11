@@ -49,7 +49,7 @@ export const Concept: React.FC = () => {
       description: '未着手の作業。これから取り組むタスクをここに配置します。',
     },
     {
-      title: 'Todo',
+      title: 'In Progress',
       description: '手をつけているが、完了していない作業。次のステップに進む準備ができたタスクです。',
     },
     {
