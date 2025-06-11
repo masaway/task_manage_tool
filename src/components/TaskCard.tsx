@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, Typography, IconButton, Box, Chip } from '@mui/material';
-import { DragHandle as DragHandleIcon, Check as CheckIcon, Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
+import { Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import { Task } from '../types/task';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -75,11 +75,6 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onComplete, onEdit, on
     width: '100%',
     height: '180px',
     marginBottom: '8px',
-  };
-
-  const handleCompleteClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onComplete(task.id);
   };
 
   return (
