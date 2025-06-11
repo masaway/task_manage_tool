@@ -39,7 +39,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onComplete }) => {
       setTimerStartTime(null);
       setElapsedTime(0);
     }
-  }, [task.status]);
+  }, [task.status, timerStartTime]);
 
   // 1秒ごとに経過時間を更新
   useEffect(() => {

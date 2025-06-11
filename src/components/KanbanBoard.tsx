@@ -24,7 +24,7 @@ import {
   SortableContext,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
-import { Task, TaskStatus } from '../types/task';
+import { TaskStatus } from '../types/task';
 import { TaskCard } from './TaskCard';
 import { TaskForm } from './TaskForm';
 import { useTasks } from '../hooks/useTasks';

@@ -290,15 +290,7 @@ export const useTasks = () => {
 
   const completeTask = async (taskId: string) => {
     try {
-      const { data, error } = await supabase
-        .from('tasks')
-        .select('*')
-        .eq('id', taskId)
-        .single();
-
-      if (error) throw error;
-
-      const { error: updateError } = await supabase
+      const { error } = await supabase
         .from('tasks')
         .update({ 
           is_completed: true,
@@ -306,15 +298,14 @@ export const useTasks = () => {
         })
         .eq('id', taskId);
 
-      if (updateError) throw updateError;
+      if (error) throw error;
 
-      setTasks(tasks.map(task => 
-        task.id === taskId ? { ...task, isCompleted: true } : task
+      setTasks(tasks.map(t => 
+        t.id === taskId ? { ...t, isCompleted: true, completedAt: new Date() } : t
       ));
     } catch (err) {
-      console.error('タスクの完了処理に失敗:', err);
-      setError(err instanceof Error ? err.message : 'タスクの完了処理に失敗しました');
-      await fetchTasks();
+      console.error('タスクの完了に失敗:', err);
+      setError(err instanceof Error ? err.message : 'タスクの完了に失敗しました');
     }
   };
 
