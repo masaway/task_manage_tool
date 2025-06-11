@@ -70,7 +70,7 @@ export const useTasks = () => {
     } else {
       setTimerStartTime(null);
     }
-  }, [tasks]);
+  }, [tasks, timerStartTime]);
 
   // 1分ごとに作業時間を更新
   useEffect(() => {
