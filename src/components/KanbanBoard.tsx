@@ -14,11 +14,14 @@ import {
   DragEndEvent,
   DragOverlay,
   DragStartEvent,
+  DragOverEvent,
   MouseSensor,
   TouchSensor,
   useSensor,
   useSensors,
   useDroppable,
+  MeasuringStrategy,
+  closestCenter,
 } from '@dnd-kit/core';
 import {
   SortableContext,
@@ -45,7 +48,7 @@ interface DroppableColumnProps {
 }
 
 const DroppableColumn: React.FC<DroppableColumnProps> = ({ status, children }) => {
-  const { setNodeRef } = useDroppable({
+  const { setNodeRef, isOver } = useDroppable({
     id: `column-${status}`,
     data: {
       type: 'column',
@@ -58,9 +61,11 @@ const DroppableColumn: React.FC<DroppableColumnProps> = ({ status, children }) =
       ref={setNodeRef}
       sx={{
         minHeight: '60vh',
-        backgroundColor: 'rgba(0, 0, 0, 0.03)',
+        backgroundColor: isOver ? 'rgba(25, 118, 210, 0.08)' : 'rgba(0, 0, 0, 0.03)',
         borderRadius: 1,
         p: 1,
+        transition: 'background-color 0.2s ease-in-out',
+        border: isOver ? '2px dashed #1976d2' : 'none',
       }}
     >
       {children}
@@ -97,9 +102,33 @@ export const KanbanBoard: React.FC = () => {
     });
   };
 
+  const handleDragOver = (event: DragOverEvent) => {
+    const { active, over } = event;
+    if (!over) return;
+
+    // タスクカード同士の重なりを検出
+    if (active.data.current?.type === 'task' && over.data.current?.type === 'task') {
+      const overElement = document.querySelector(`[data-id="${over.id}"]`);
+      if (overElement) {
+        // 重なっている要素にdata-over属性を設定
+        overElement.setAttribute('data-over', 'true');
+      }
+    } else {
+      // 重なっていない場合は、すべてのdata-over属性を削除
+      document.querySelectorAll('[data-over="true"]').forEach(element => {
+        element.removeAttribute('data-over');
+      });
+    }
+  };
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveId(null);
+
+    // すべてのタスクカードからdata-over属性を削除
+    document.querySelectorAll('[data-over="true"]').forEach(element => {
+      element.removeAttribute('data-over');
+    });
 
     console.log('Drag ended:', {
       activeTaskId: active.id,
@@ -112,7 +141,9 @@ export const KanbanBoard: React.FC = () => {
     const activeTask = tasks.find(task => task.id === active.id);
     const targetStatus = over.data.current?.type === 'column' 
       ? over.data.current.status as TaskStatus
-      : null;
+      : over.data.current?.type === 'task'
+        ? tasks.find(task => task.id === over.id)?.status as TaskStatus
+        : null;
 
     if (activeTask && targetStatus && activeTask.status !== targetStatus) {
       if (targetStatus === 'now') {
@@ -161,7 +192,7 @@ export const KanbanBoard: React.FC = () => {
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <Typography variant="h4" component="h1">
-            タスク管理ボード
+            Ittō
           </Typography>
           <Button
             variant="outlined"
@@ -182,7 +213,16 @@ export const KanbanBoard: React.FC = () => {
       <DndContext
         sensors={sensors}
         onDragStart={handleDragStart}
+        onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
+        modifiers={[]}
+        autoScroll={false}
+        measuring={{
+          droppable: {
+            strategy: MeasuringStrategy.Always,
+          },
+        }}
+        collisionDetection={closestCenter}
       >
         <Grid container spacing={2}>
           {STATUS_COLUMNS.map((status) => (
@@ -207,6 +247,8 @@ export const KanbanBoard: React.FC = () => {
                         key={task.id}
                         task={task}
                         onComplete={completeTask}
+                        onEdit={(task) => updateTaskStatus(task.id, task.status)}
+                        onDelete={() => {}}
                       />
                     ))}
                   </SortableContext>
@@ -215,11 +257,16 @@ export const KanbanBoard: React.FC = () => {
             </Grid>
           ))}
         </Grid>
-        <DragOverlay>
+        <DragOverlay dropAnimation={{
+          duration: 200,
+          easing: 'cubic-bezier(0.2, 0, 0, 1)',
+        }}>
           {activeId ? (
             <TaskCard
               task={tasks.find(task => task.id === activeId)!}
               onComplete={completeTask}
+              onEdit={(task) => updateTaskStatus(task.id, task.status)}
+              onDelete={() => {}}
             />
           ) : null}
         </DragOverlay>

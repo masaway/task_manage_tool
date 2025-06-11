@@ -85,13 +85,19 @@ export const Concept: React.FC = () => {
                   fontSize: { xs: '2.5rem', md: '3.5rem' },
                 }}
               >
-                タスク管理ツール
+                Ittō (一灯)
               </Typography>
               <Typography
                 variant="h5"
-                sx={{ mb: 4, opacity: 0.9 }}
+                sx={{ mb: 2, opacity: 0.9 }}
               >
-                人間は同時に一つのことしかできない。
+                暗闇に灯る、ただ一つの光
+              </Typography>
+              <Typography
+                variant="h6"
+                sx={{ mb: 4, opacity: 0.8 }}
+              >
+                数あるタスクの中から、今照らすべきは一つだけ。
                 シンプルな考え方で、より効率的な作業管理を。
               </Typography>
               <Button

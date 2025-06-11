@@ -1,16 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, Typography, IconButton, Box } from '@mui/material';
-import { DragHandle as DragHandleIcon, Check as CheckIcon } from '@mui/icons-material';
+import { Card, CardContent, Typography, IconButton, Box, Chip } from '@mui/material';
+import { DragHandle as DragHandleIcon, Check as CheckIcon, Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import { Task } from '../types/task';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { formatDate, formatDuration } from '../utils/dateUtils';
 
 interface TaskCardProps {
   task: Task;
   onComplete: (taskId: string) => void;
+  onEdit: (task: Task) => void;
+  onDelete: (taskId: string) => void;
 }
 
-export const TaskCard: React.FC<TaskCardProps> = ({ task, onComplete }) => {
+export const TaskCard: React.FC<TaskCardProps> = ({ task, onComplete, onEdit, onDelete }) => {
   const [elapsedTime, setElapsedTime] = useState<number>(0);
   const [timerStartTime, setTimerStartTime] = useState<Date | null>(null);
 
@@ -27,6 +30,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onComplete }) => {
       type: 'task',
       task,
     },
+    animateLayoutChanges: () => true,
   });
 
   // タイマーの更新処理
@@ -63,8 +67,14 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onComplete }) => {
 
   const style = {
     transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
+    transition: transition || 'transform 200ms cubic-bezier(0.2, 0, 0, 1)',
+    opacity: isDragging ? 0.3 : 1,
+    position: 'relative' as const,
+    zIndex: isDragging ? 1000 : 1,
+    boxShadow: isDragging ? '0 8px 16px rgba(0,0,0,0.2)' : 'none',
+    width: '100%',
+    height: '180px',
+    marginBottom: '8px',
   };
 
   const handleCompleteClick = (e: React.MouseEvent) => {
@@ -75,52 +85,75 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onComplete }) => {
   return (
     <Card
       ref={setNodeRef}
-      style={style}
       {...attributes}
       {...listeners}
+      data-id={task.id}
       sx={{
         mb: 2,
-        backgroundColor: task.isCompleted ? '#f5f5f5' : 'white',
         cursor: 'grab',
         '&:active': {
           cursor: 'grabbing',
         },
+        ...style,
+        '&[data-dragging="true"]': {
+          zIndex: 1000,
+        },
+        '&[data-over="true"]': {
+          transform: 'translateY(20px)',
+          transition: 'transform 200ms cubic-bezier(0.2, 0, 0, 1)',
+        },
       }}
     >
-      <CardContent>
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <DragHandleIcon />
-          {!task.isCompleted && (
-            <IconButton
-              size="small"
-              onClick={handleCompleteClick}
-              sx={{ color: 'success.main' }}
-            >
-              <CheckIcon />
+      <CardContent sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+        <Box display="flex" justifyContent="space-between" alignItems="flex-start">
+          <Typography variant="h6" component="div" gutterBottom sx={{ 
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+          }}>
+            {task.title}
+          </Typography>
+          <Box>
+            <IconButton size="small" onClick={() => onEdit(task)}>
+              <EditIcon />
             </IconButton>
+            <IconButton size="small" onClick={() => onDelete(task.id)}>
+              <DeleteIcon />
+            </IconButton>
+          </Box>
+        </Box>
+        <Box display="flex" gap={1} flexWrap="wrap" mt={1}>
+          <Chip
+            label={`見積: ${formatDuration(task.estimatedHours)}`}
+            size="small"
+            color="primary"
+            variant="outlined"
+          />
+          {task.actualHours && (
+            <Chip
+              label={`実績: ${task.actualHours}`}
+              size="small"
+              color="secondary"
+              variant="outlined"
+            />
+          )}
+          {task.dueDate && (
+            <Chip
+              label={`期限: ${formatDate(task.dueDate)}`}
+              size="small"
+              color={task.isCompleted ? 'success' : 'warning'}
+              variant="outlined"
+            />
           )}
         </Box>
-
-        <Typography variant="h6" component="div" sx={{ mt: 1 }}>
-          {task.title}
-        </Typography>
-        <Box sx={{ mt: 1 }}>
+        <Box sx={{ mt: 'auto' }}>
           {task.startedAt && (
             <Typography variant="body2" color="text.secondary">
               作業開始日: {new Date(task.startedAt).toLocaleDateString()}
             </Typography>
           )}
-          {task.dueDate && (
-            <Typography variant="body2" color="text.secondary">
-              期限日時: {new Date(task.dueDate).toLocaleDateString()}
-            </Typography>
-          )}
-          <Typography variant="body2" color="text.secondary">
-            予定時間: {task.estimatedHours}時間
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            累計作業時間: {task.actualHours}
-          </Typography>
           {task.status === 'now' && (
             <Typography variant="body2" color="primary" sx={{ mt: 1, fontWeight: 'bold' }}>
               現在の作業時間: {formatTime(elapsedTime)}
