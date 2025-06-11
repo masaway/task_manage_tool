@@ -97,7 +97,7 @@ export const Concept: React.FC = () => {
                 variant="h6"
                 sx={{ mb: 4, opacity: 0.8 }}
               >
-                人間は同時に一つのことしかできない。
+                人間は同時に一つのことしかできない。<br />
                 シンプルな考え方で、より効率的な作業管理を。
               </Typography>
               <Button
