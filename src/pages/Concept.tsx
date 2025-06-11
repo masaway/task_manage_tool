@@ -67,7 +67,7 @@ export const Concept: React.FC = () => {
       {/* ヒーローセクション */}
       <Box
         sx={{
-          background: `linear-gradient(45deg, ${theme.palette.primary.main} 30%, ${theme.palette.secondary.main} 90%)`,
+          background: `linear-gradient(135deg, ${theme.palette.primary.dark} 0%, ${theme.palette.primary.main} 50%, ${theme.palette.secondary.main} 100%)`,
           color: 'white',
           py: { xs: 8, md: 12 },
           mb: 6,
@@ -76,17 +76,23 @@ export const Concept: React.FC = () => {
         <Container maxWidth="lg">
           <Grid container spacing={4} alignItems="center">
             <Grid item xs={12} md={6}>
-              <Typography
-                variant="h2"
-                component="h1"
-                gutterBottom
-                sx={{
-                  fontWeight: 'bold',
-                  fontSize: { xs: '2.5rem', md: '3.5rem' },
-                }}
-              >
-                Ittō (一灯)
-              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+                <img
+                  src="/logo.png"
+                  alt="Ittō Logo"
+                  style={{ height: '60px', marginRight: '16px' }}
+                />
+                <Typography
+                  variant="h2"
+                  component="h1"
+                  sx={{
+                    fontWeight: 'bold',
+                    fontSize: { xs: '2.5rem', md: '3.5rem' },
+                  }}
+                >
+                  Ittō (一灯)
+                </Typography>
+              </Box>
               <Typography
                 variant="h5"
                 sx={{ mb: 2, opacity: 0.9 }}
