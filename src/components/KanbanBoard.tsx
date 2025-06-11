@@ -18,6 +18,7 @@ import {
   TouchSensor,
   useSensor,
   useSensors,
+  useDroppable,
 } from '@dnd-kit/core';
 import {
   SortableContext,
@@ -36,6 +37,35 @@ const COLUMN_TITLES: Record<TaskStatus, string> = {
 };
 
 const STATUS_COLUMNS: TaskStatus[] = ['backlog', 'todo', 'now', 'done'];
+
+interface DroppableColumnProps {
+  status: TaskStatus;
+  children: React.ReactNode;
+}
+
+const DroppableColumn: React.FC<DroppableColumnProps> = ({ status, children }) => {
+  const { setNodeRef } = useDroppable({
+    id: `column-${status}`,
+    data: {
+      type: 'column',
+      status,
+    },
+  });
+
+  return (
+    <Box
+      ref={setNodeRef}
+      sx={{
+        minHeight: '60vh',
+        backgroundColor: 'rgba(0, 0, 0, 0.03)',
+        borderRadius: 1,
+        p: 1,
+      }}
+    >
+      {children}
+    </Box>
+  );
+};
 
 export const KanbanBoard: React.FC = () => {
   const { tasks, loading, error, createTask, updateTaskStatus, completeTask } = useTasks();
@@ -57,20 +87,38 @@ export const KanbanBoard: React.FC = () => {
   );
 
   const handleDragStart = (event: DragStartEvent) => {
-    setActiveId(event.active.id as string);
+    const { active } = event;
+    setActiveId(active.id as string);
+    console.log('Drag started:', {
+      taskId: active.id,
+      task: tasks.find(task => task.id === active.id)
+    });
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveId(null);
 
+    console.log('Drag ended:', {
+      activeTaskId: active.id,
+      overId: over?.id,
+      overData: over?.data.current
+    });
+
     if (!over) return;
 
     const activeTask = tasks.find(task => task.id === active.id);
-    const overStatus = over.id as TaskStatus;
+    const targetStatus = over.data.current?.type === 'column' 
+      ? over.data.current.status as TaskStatus
+      : null;
 
-    if (activeTask && activeTask.status !== overStatus) {
-      updateTaskStatus(activeTask.id, overStatus);
+    if (activeTask && targetStatus && activeTask.status !== targetStatus) {
+      console.log('Updating task status:', {
+        taskId: activeTask.id,
+        currentStatus: activeTask.status,
+        newStatus: targetStatus
+      });
+      updateTaskStatus(activeTask.id, targetStatus);
     }
   };
 
@@ -127,18 +175,10 @@ export const KanbanBoard: React.FC = () => {
                 <Typography variant="h6" sx={{ mb: 2 }}>
                   {COLUMN_TITLES[status]}
                 </Typography>
-                <SortableContext
-                  items={getTasksByStatus(status).map(task => task.id)}
-                  strategy={verticalListSortingStrategy}
-                >
-                  <Box
-                    sx={{
-                      minHeight: '60vh',
-                      backgroundColor: 'rgba(0, 0, 0, 0.03)',
-                      borderRadius: 1,
-                      p: 1,
-                    }}
-                    id={status}
+                <DroppableColumn status={status}>
+                  <SortableContext
+                    items={getTasksByStatus(status).map(task => task.id)}
+                    strategy={verticalListSortingStrategy}
                   >
                     {getTasksByStatus(status).map((task) => (
                       <TaskCard
@@ -147,8 +187,8 @@ export const KanbanBoard: React.FC = () => {
                         onComplete={completeTask}
                       />
                     ))}
-                  </Box>
-                </SortableContext>
+                  </SortableContext>
+                </DroppableColumn>
               </Paper>
             </Grid>
           ))}
