@@ -97,7 +97,7 @@ export const Concept: React.FC = () => {
                 variant="h6"
                 sx={{ mb: 4, opacity: 0.8 }}
               >
-                数あるタスクの中から、今照らすべきは一つだけ。
+                人間は同時に一つのことしかできない。
                 シンプルな考え方で、より効率的な作業管理を。
               </Typography>
               <Button
@@ -133,6 +133,89 @@ export const Concept: React.FC = () => {
                   作業実績を<br />
                   自動で計測する<br />
                   唯一のタスク管理
+                </Typography>
+              </Box>
+            </Grid>
+          </Grid>
+        </Container>
+      </Box>
+
+      {/* アプリ名の由来セクション */}
+      <Box sx={{ py: 8, bgcolor: 'grey.50' }}>
+        <Container maxWidth="lg">
+          <Grid container spacing={4} alignItems="center">
+            <Grid item xs={12} md={6}>
+              <Typography
+                variant="h3"
+                component="h2"
+                gutterBottom
+                sx={{ mb: 4 }}
+              >
+                アプリ名の由来
+              </Typography>
+              <Typography variant="h4" sx={{ mb: 3, color: 'primary.main' }}>
+                Ittō (一灯)
+              </Typography>
+              <Typography variant="body1" paragraph sx={{ fontSize: '1.1rem', mb: 3 }}>
+                「暗闇に灯る、ただ一つの光」
+              </Typography>
+              <Typography variant="body1" paragraph sx={{ fontSize: '1.1rem', mb: 3 }}>
+                私たちは、日々の仕事の中で多くのタスクに追われ、時に混乱し、時に迷うことがあります。
+                そんな中で、今この瞬間に取り組むべきは、ただ一つだけ。
+              </Typography>
+              <Typography variant="body1" paragraph sx={{ fontSize: '1.1rem', mb: 3 }}>
+                人間は同時に一つのことしかできない。
+                このシンプルな真実に基づき、私たちはIttōを設計しました。
+                複数のタスクに分散するのではなく、一つの光に集中することで、
+                より効率的で充実した仕事を実現する。それが、Ittōの目指す世界です。
+              </Typography>
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <Box
+                sx={{
+                  width: '100%',
+                  height: 400,
+                  bgcolor: 'rgba(25, 118, 210, 0.05)',
+                  borderRadius: 2,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  position: 'relative',
+                  overflow: 'hidden',
+                  '&::before': {
+                    content: '""',
+                    position: 'absolute',
+                    width: '200%',
+                    height: '200%',
+                    background: 'radial-gradient(circle, rgba(25, 118, 210, 0.1) 0%, rgba(25, 118, 210, 0) 70%)',
+                    animation: 'pulse 4s ease-in-out infinite',
+                  },
+                  '@keyframes pulse': {
+                    '0%': {
+                      transform: 'scale(1)',
+                      opacity: 0.5,
+                    },
+                    '50%': {
+                      transform: 'scale(1.2)',
+                      opacity: 0.8,
+                    },
+                    '100%': {
+                      transform: 'scale(1)',
+                      opacity: 0.5,
+                    },
+                  },
+                }}
+              >
+                <Typography
+                  variant="h3"
+                  sx={{
+                    color: 'primary.main',
+                    textAlign: 'center',
+                    fontWeight: 'bold',
+                  }}
+                >
+                  一つの光に<br />
+                  集中する
                 </Typography>
               </Box>
             </Grid>
