@@ -28,6 +28,7 @@ import { TaskStatus } from '../types/task';
 import { TaskCard } from './TaskCard';
 import { TaskForm } from './TaskForm';
 import { useTasks } from '../hooks/useTasks';
+import { useNavigate } from 'react-router-dom';
 
 const COLUMN_TITLES: Record<TaskStatus, string> = {
   backlog: 'Backlog',
@@ -71,6 +72,7 @@ export const KanbanBoard: React.FC = () => {
   const { tasks, loading, error, createTask, updateTaskStatus, updateMultipleTaskStatuses, completeTask } = useTasks();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   const sensors = useSensors(
     useSensor(MouseSensor, {
@@ -157,9 +159,17 @@ export const KanbanBoard: React.FC = () => {
   return (
     <Box sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
-        <Typography variant="h4" component="h1">
-          タスク管理ボード
-        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Typography variant="h4" component="h1">
+            タスク管理ボード
+          </Typography>
+          <Button
+            variant="outlined"
+            onClick={() => navigate('/concept')}
+          >
+            コンセプト
+          </Button>
+        </Box>
         <Button
           variant="contained"
           color="primary"
