@@ -1,0 +1,11 @@
+    SupabaseClient.ts:75 Uncaught Error: supabaseUrl is required.
+    at new SupabaseClient (SupabaseClient.ts:75:1)
+    at createClient (index.ts:40:1)
+    at ./src/services/supabase.ts (supabase.ts:6:1)
+    at options.factory (react refresh:37:1)
+    at __webpack_require__ (bootstrap:22:1)
+    at fn (hot module replacement:61:1)
+    at hotRequire (react refresh:20:1)
+    at ./src/hooks/useTasks.ts (TaskForm.tsx:25:1)
+    at options.factory (react refresh:37:1)
+    at __webpack_require__ (bootstrap:22:1)

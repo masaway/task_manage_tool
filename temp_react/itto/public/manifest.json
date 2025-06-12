@@ -1,6 +1,6 @@
 {
-  "short_name": "Ittō",
-  "name": "Ittō（一灯） - タスク管理ツール",
+  "short_name": "React App",
+  "name": "Create React App Sample",
   "icons": [
     {
       "src": "favicon.ico",

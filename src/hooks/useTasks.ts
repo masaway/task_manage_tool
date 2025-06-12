@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Task, TaskFormData } from '../types/task';
-import { supabase } from '../services/supabase';
+import { supabase, isSupabaseConfigured } from '../services/supabase';
 
 // 時間をHH:MM:SS形式に変換する関数
 const formatTimeToHHMMSS = (hours: number): string => {
@@ -40,9 +40,17 @@ export const useTasks = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [timerStartTime, setTimerStartTime] = useState<Date | null>(null);
+  const [isOfflineMode, setIsOfflineMode] = useState(!isSupabaseConfigured());
 
   useEffect(() => {
-    fetchTasks();
+    if (isSupabaseConfigured()) {
+      fetchTasks();
+    } else {
+      // オフラインモード - ダミーデータで初期化
+      setIsOfflineMode(true);
+      setLoading(false);
+      setError('Supabaseが設定されていません。オフラインモードで動作しています。');
+    }
   }, []);
 
   // タイマーの更新処理
@@ -106,6 +114,11 @@ export const useTasks = () => {
   }, [timerStartTime, tasks]);
 
   const fetchTasks = async () => {
+    if (!isSupabaseConfigured()) {
+      setLoading(false);
+      return;
+    }
+
     try {
       const { data, error } = await supabase
         .from('tasks')
@@ -125,6 +138,24 @@ export const useTasks = () => {
   };
 
   const createTask = async (taskData: TaskFormData) => {
+    console.log('Creating task:', taskData);
+    if (!isSupabaseConfigured()) {
+      // オフラインモード - ローカルでタスク作成
+      const newTask: Task = {
+        id: Date.now().toString(),
+        title: taskData.title,
+        status: 'backlog',
+        estimatedHours: taskData.estimatedHours,
+        actualHours: '00:00:00',
+        createdAt: new Date(),
+        dueDate: taskData.dueDate,
+        isCompleted: false,
+      };
+      console.log('New task created:', newTask);
+      setTasks([newTask, ...tasks]);
+      return;
+    }
+
     try {
       const { data, error } = await supabase
         .from('tasks')
@@ -151,10 +182,18 @@ export const useTasks = () => {
   };
 
   const updateTaskStatus = async (taskId: string, newStatus: Task['status']) => {
-    try {
-      const task = tasks.find(t => t.id === taskId);
-      if (!task) return;
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
 
+    if (!isSupabaseConfigured()) {
+      // オフラインモード - ローカルでステータス更新
+      setTasks(tasks.map(t => 
+        t.id === taskId ? { ...t, status: newStatus } : t
+      ));
+      return;
+    }
+
+    try {
       // ステータスがnowから変更される場合、作業時間を更新
       if (task.status === 'now' && newStatus !== 'now') {
         const elapsedHours = timerStartTime ? 
@@ -205,6 +244,21 @@ export const useTasks = () => {
   };
 
   const updateMultipleTaskStatuses = async (updates: { taskId: string; newStatus: Task['status'] }[]) => {
+    if (!isSupabaseConfigured()) {
+      // オフラインモード - ローカルで一括更新
+      setTasks(currentTasks => {
+        const taskMap = new Map(currentTasks.map(task => [task.id, task]));
+        updates.forEach(({ taskId, newStatus }) => {
+          const task = taskMap.get(taskId);
+          if (task) {
+            taskMap.set(taskId, { ...task, status: newStatus });
+          }
+        });
+        return Array.from(taskMap.values());
+      });
+      return;
+    }
+
     try {
       // 時間更新が必要なタスクを特定
       const timeUpdates = updates.map(({ taskId, newStatus }) => {
@@ -289,6 +343,14 @@ export const useTasks = () => {
   };
 
   const completeTask = async (taskId: string) => {
+    if (!isSupabaseConfigured()) {
+      // オフラインモード - ローカルで完了処理
+      setTasks(tasks.map(t => 
+        t.id === taskId ? { ...t, isCompleted: true, completedAt: new Date() } : t
+      ));
+      return;
+    }
+
     try {
       const { error } = await supabase
         .from('tasks')
@@ -313,9 +375,10 @@ export const useTasks = () => {
     tasks,
     loading,
     error,
+    isOfflineMode,
     createTask,
     updateTaskStatus,
     updateMultipleTaskStatuses,
     completeTask,
   };
-}; 
+};

@@ -1,22 +1,30 @@
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, Typography, IconButton, Box, Chip } from '@mui/material';
-import { Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
-import { Task } from '../types/task';
+import React from 'react';
+import {
+  Card,
+  CardContent,
+  Typography,
+  Chip,
+  Box,
+  IconButton,
+  LinearProgress,
+} from '@mui/material';
+import {
+  DragIndicator,
+  CheckCircle,
+  Schedule,
+  Timer,
+} from '@mui/icons-material';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { formatDate, formatDuration } from '../utils/dateUtils';
+import { Task } from '../types/task';
+import { formatDate, formatTime, calculateDaysUntilDue } from '../utils/dateUtils';
 
 interface TaskCardProps {
   task: Task;
   onComplete: (taskId: string) => void;
-  onEdit: (task: Task) => void;
-  onDelete: (taskId: string) => void;
 }
 
-export const TaskCard: React.FC<TaskCardProps> = ({ task, onComplete, onEdit, onDelete }) => {
-  const [elapsedTime, setElapsedTime] = useState<number>(0);
-  const [timerStartTime, setTimerStartTime] = useState<Date | null>(null);
-
+export const TaskCard: React.FC<TaskCardProps> = ({ task, onComplete }) => {
   const {
     attributes,
     listeners,
@@ -24,138 +32,164 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onComplete, onEdit, on
     transform,
     transition,
     isDragging,
-  } = useSortable({
-    id: task.id,
-    data: {
-      type: 'task',
-      task,
-    },
-    animateLayoutChanges: () => true,
-  });
-
-  // タイマーの更新処理
-  useEffect(() => {
-    if (task.status === 'now') {
-      if (!timerStartTime) {
-        setTimerStartTime(new Date());
-      }
-    } else {
-      setTimerStartTime(null);
-      setElapsedTime(0);
-    }
-  }, [task.status, timerStartTime]);
-
-  // 1秒ごとに経過時間を更新
-  useEffect(() => {
-    if (!timerStartTime) return;
-
-    const interval = setInterval(() => {
-      const now = new Date();
-      const elapsed = (now.getTime() - timerStartTime.getTime()) / 1000;
-      setElapsedTime(elapsed);
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [timerStartTime]);
-
-  const formatTime = (seconds: number): string => {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const remainingSeconds = Math.floor(seconds % 60);
-    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
-  };
+  } = useSortable({ id: task.id });
 
   const style = {
     transform: CSS.Transform.toString(transform),
-    transition: transition || 'transform 200ms cubic-bezier(0.2, 0, 0, 1)',
-    opacity: isDragging ? 0.3 : 1,
-    position: 'relative' as const,
-    zIndex: isDragging ? 1000 : 1,
-    boxShadow: isDragging ? '0 8px 16px rgba(0,0,0,0.2)' : 'none',
-    width: '100%',
-    height: '180px',
-    marginBottom: '8px',
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  const getStatusColor = (status: Task['status']) => {
+    switch (status) {
+      case 'backlog':
+        return 'default';
+      case 'in_progress':
+        return 'info';
+      case 'now':
+        return 'warning';
+      case 'done':
+        return 'success';
+      default:
+        return 'default';
+    }
+  };
+
+  const getStatusLabel = (status: Task['status']) => {
+    switch (status) {
+      case 'backlog':
+        return 'Backlog';
+      case 'in_progress':
+        return 'In Progress';
+      case 'now':
+        return 'Now';
+      case 'done':
+        return 'Done';
+      default:
+        return status;
+    }
+  };
+
+  const calculateProgress = () => {
+    if (!task.actualHours || task.estimatedHours === 0) return 0;
+    const actualMinutes = task.actualHours.split(':').reduce((acc, time, index) => {
+      return acc + parseInt(time) * [60, 1, 1/60][index];
+    }, 0);
+    const actualHours = actualMinutes / 60;
+    return Math.min((actualHours / task.estimatedHours) * 100, 100);
+  };
+
+  const getDueDateChip = () => {
+    if (!task.dueDate) return null;
+    
+    const daysUntilDue = calculateDaysUntilDue(task.dueDate);
+    let color: 'default' | 'warning' | 'error' = 'default';
+    
+    if (daysUntilDue < 0) {
+      color = 'error';
+    } else if (daysUntilDue <= 3) {
+      color = 'warning';
+    }
+
+    return (
+      <Chip
+        size="small"
+        icon={<Schedule />}
+        label={`期限: ${formatDate(task.dueDate)}`}
+        color={color}
+        variant={daysUntilDue < 0 ? 'filled' : 'outlined'}
+      />
+    );
   };
 
   return (
     <Card
       ref={setNodeRef}
-      {...attributes}
-      {...listeners}
-      data-id={task.id}
+      style={style}
       sx={{
-        mb: 2,
-        cursor: 'grab',
-        '&:active': {
-          cursor: 'grabbing',
+        mb: 1,
+        cursor: isDragging ? 'grabbing' : 'grab',
+        '&:hover': {
+          boxShadow: 3,
         },
-        ...style,
-        '&[data-dragging="true"]': {
-          zIndex: 1000,
-        },
-        '&[data-over="true"]': {
-          transform: 'translateY(20px)',
-          transition: 'transform 200ms cubic-bezier(0.2, 0, 0, 1)',
-        },
+        border: task.status === 'now' ? '2px solid #ff9800' : '1px solid #e0e0e0',
       }}
     >
-      <CardContent sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-        <Box display="flex" justifyContent="space-between" alignItems="flex-start">
-          <Typography variant="h6" component="div" gutterBottom sx={{ 
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            display: '-webkit-box',
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: 'vertical',
-          }}>
-            {task.title}
-          </Typography>
-          <Box>
-            <IconButton size="small" onClick={() => onEdit(task)}>
-              <EditIcon />
-            </IconButton>
-            <IconButton size="small" onClick={() => onDelete(task.id)}>
-              <DeleteIcon />
-            </IconButton>
-          </Box>
-        </Box>
-        <Box display="flex" gap={1} flexWrap="wrap" mt={1}>
-          <Chip
-            label={`見積: ${formatDuration(task.estimatedHours)}`}
+      <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+        <Box display="flex" alignItems="flex-start" mb={1}>
+          <IconButton
             size="small"
-            color="primary"
-            variant="outlined"
-          />
-          {task.actualHours && (
+            {...attributes}
+            {...listeners}
+            sx={{ 
+              p: 0.5, 
+              mr: 1, 
+              cursor: isDragging ? 'grabbing' : 'grab',
+              color: 'text.secondary'
+            }}
+          >
+            <DragIndicator />
+          </IconButton>
+          <Box flexGrow={1}>
+            <Typography
+              variant="subtitle2"
+              component="h3"
+              gutterBottom
+              sx={{
+                fontWeight: 600,
+                lineHeight: 1.2,
+                mb: 1,
+              }}
+            >
+              {task.title}
+            </Typography>
             <Chip
-              label={`実績: ${task.actualHours}`}
               size="small"
-              color="secondary"
-              variant="outlined"
+              label={getStatusLabel(task.status)}
+              color={getStatusColor(task.status)}
+              sx={{ mb: 1 }}
             />
-          )}
-          {task.dueDate && (
-            <Chip
-              label={`期限: ${formatDate(task.dueDate)}`}
+          </Box>
+          {task.status !== 'done' && !task.isCompleted && (
+            <IconButton
               size="small"
-              color={task.isCompleted ? 'success' : 'warning'}
-              variant="outlined"
-            />
+              onClick={() => onComplete(task.id)}
+              sx={{ color: 'success.main' }}
+            >
+              <CheckCircle />
+            </IconButton>
           )}
         </Box>
-        <Box sx={{ mt: 'auto' }}>
-          {task.startedAt && (
-            <Typography variant="body2" color="text.secondary">
-              作業開始日: {new Date(task.startedAt).toLocaleDateString()}
+
+        <Box mb={1}>
+          <Box display="flex" alignItems="center" gap={1} mb={0.5}>
+            <Timer sx={{ fontSize: 16, color: 'text.secondary' }} />
+            <Typography variant="caption" color="text.secondary">
+              作業時間: {formatTime(task.actualHours || '00:00:00')} / {task.estimatedHours}h
             </Typography>
-          )}
-          {task.status === 'now' && (
-            <Typography variant="body2" color="primary" sx={{ mt: 1, fontWeight: 'bold' }}>
-              現在の作業時間: {formatTime(elapsedTime)}
-            </Typography>
-          )}
+          </Box>
+          <LinearProgress
+            variant="determinate"
+            value={calculateProgress()}
+            sx={{
+              height: 4,
+              borderRadius: 2,
+              bgcolor: 'grey.200',
+              '& .MuiLinearProgress-bar': {
+                borderRadius: 2,
+                bgcolor: task.status === 'now' ? 'warning.main' : 'primary.main',
+              },
+            }}
+          />
+        </Box>
+
+        <Box display="flex" flexDirection="column" gap={0.5}>
+          {getDueDateChip()}
+          <Typography variant="caption" color="text.secondary">
+            作成日: {formatDate(task.createdAt)}
+          </Typography>
         </Box>
       </CardContent>
     </Card>
   );
-}; 
+};
