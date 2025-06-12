@@ -1,6 +1,6 @@
 {
   "short_name": "Ittō",
-  "name": "Ittō - 暗闇に灯る、ただ一つの光",
+  "name": "Ittō（一灯） - タスク管理ツール",
   "icons": [
     {
       "src": "favicon.ico",
@@ -8,18 +8,18 @@
       "type": "image/x-icon"
     },
     {
-      "src": "logo.png",
+      "src": "logo192.png",
       "type": "image/png",
       "sizes": "192x192"
     },
     {
-      "src": "logo.png",
+      "src": "logo512.png",
       "type": "image/png",
       "sizes": "512x512"
     }
   ],
   "start_url": ".",
   "display": "standalone",
-  "theme_color": "#1976d2",
+  "theme_color": "#000000",
   "background_color": "#ffffff"
 }
